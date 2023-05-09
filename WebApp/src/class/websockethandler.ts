@@ -11,12 +11,13 @@ const clients: Map<WebSocket, Set<string>> = new Map<WebSocket, Set<string>>();
 const connectionPair: Map<string, [WebSocket, WebSocket]> = new Map<string, [WebSocket, WebSocket]>();
 
 function getOrCreateConnectionIds(session: WebSocket): Set<string> {
-  let connectionIds = null;
-  if (!clients.has(session)) {
+  let connectionIds = clients.get(session);
+
+  if (!connectionIds) {
     connectionIds = new Set<string>();
     clients.set(session, connectionIds);
   }
-  connectionIds = clients.get(session);
+
   return connectionIds;
 }
 
@@ -30,16 +31,19 @@ function add(ws: WebSocket): void {
 
 function remove(ws: WebSocket): void {
   const connectionIds = clients.get(ws);
-  connectionIds.forEach(connectionId => {
-    const pair = connectionPair.get(connectionId);
-    if (pair) {
-      const otherSessionWs = pair[0] == ws ? pair[1] : pair[0];
-      if (otherSessionWs) {
-        otherSessionWs.send(JSON.stringify({ type: "disconnect", connectionId: connectionId }));
+
+  if (connectionIds) {
+    connectionIds.forEach(connectionId => {
+      const pair = connectionPair.get(connectionId);
+      if (pair) {
+        const otherSessionWs = pair[0] == ws ? pair[1] : pair[0];
+        if (otherSessionWs) {
+          otherSessionWs.send(JSON.stringify({ type: "disconnect", connectionId: connectionId }));
+        }
       }
-    }
-    connectionPair.delete(connectionId);
-  });
+      connectionPair.delete(connectionId);
+    });
+  }
 
   clients.delete(ws);
 }
@@ -69,7 +73,9 @@ function onConnect(ws: WebSocket, connectionId: string): void {
 
 function onDisconnect(ws: WebSocket, connectionId: string): void {
   const connectionIds = clients.get(ws);
-  connectionIds.delete(connectionId);
+  if (connectionIds) {
+    connectionIds.delete(connectionId);
+  }
 
   if (connectionPair.has(connectionId)) {
     const pair = connectionPair.get(connectionId);
@@ -92,7 +98,7 @@ function onOffer(ws: WebSocket, message: any): void {
       const otherSessionWs = pair[0] == ws ? pair[1] : pair[0];
       if (otherSessionWs) {
         newOffer.polite = true;
-        otherSessionWs.send(JSON.stringify({ from: connectionId, to: "", type: "offer", data: newOffer }));
+        otherSessionWs.send(JSON.stringify({ from: connectionId, to: "", type: "video-offer", data: newOffer }));
       }
     }
     return;
@@ -103,7 +109,7 @@ function onOffer(ws: WebSocket, message: any): void {
     if (k == ws) {
       return;
     }
-    k.send(JSON.stringify({ from: connectionId, to: "", type: "offer", data: newOffer }));
+    k.send(JSON.stringify({ from: connectionId, to: "", type: "video-offer", data: newOffer }));
   });
 }
 
@@ -124,19 +130,19 @@ function onAnswer(ws: WebSocket, message: any): void {
     connectionPair.set(connectionId, [otherSessionWs, ws]);
   }
 
-  otherSessionWs.send(JSON.stringify({ from: connectionId, to: "", type: "answer", data: newAnswer }));
+  otherSessionWs.send(JSON.stringify({ from: connectionId, to: "", type: "video-answer", data: newAnswer }));
 }
 
 function onCandidate(ws: WebSocket, message: any): void {
-  const connectionId = message.connectionId;
-  const candidate = new Candidate(message.candidate, message.sdpMLineIndex, message.sdpMid, Date.now());
+  const connectionId = message.connectionId;  // this message is from {connectionId}
+  const candidate = new Candidate(message.candidate, message.sdpMLineIndex, message.sdpMid, Date.now());  // the candidate message body
 
   if (isPrivate) {
     if (connectionPair.has(connectionId)) {
       const pair = connectionPair.get(connectionId);
       const otherSessionWs = pair[0] == ws ? pair[1] : pair[0];
       if (otherSessionWs) {
-        otherSessionWs.send(JSON.stringify({ from: connectionId, to: "", type: "candidate", data: candidate }));
+        otherSessionWs.send(JSON.stringify({ from: connectionId, to: "", type: "new-ice-candidate", data: candidate }));
       }
     }
     return;
@@ -146,7 +152,7 @@ function onCandidate(ws: WebSocket, message: any): void {
     if (k === ws) {
       return;
     }
-    k.send(JSON.stringify({ from: connectionId, to: "", type: "candidate", data: candidate }));
+    k.send(JSON.stringify({ from: connectionId, to: "", type: "new-ice-candidate", data: candidate }));
   });
 }
 

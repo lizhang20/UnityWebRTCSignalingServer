@@ -80,7 +80,7 @@ export class RenderStreaming {
     if (this.options.type == 'websocket') {
       console.log(`Use websocket for signaling server ws://${this.getIPAddress()[0]}`);
 
-      //Start Websocket Signaling server
+      // Start Websocket Signaling server
       new WSSignaling(this.server, this.options.mode);
     }
 

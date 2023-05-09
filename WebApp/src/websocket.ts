@@ -43,13 +43,13 @@ export default class WSSignaling {
           case "disconnect":
             handler.onDisconnect(ws, msg.connectionId);
             break;
-          case "offer":
+          case "video-offer":
             handler.onOffer(ws, msg.data);
             break;
-          case "answer":
+          case "video-answer":
             handler.onAnswer(ws, msg.data);
             break;
-          case "candidate":
+          case "new-ice-candidate":
             handler.onCandidate(ws, msg.data);
             break;
           default:
