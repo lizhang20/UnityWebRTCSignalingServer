@@ -1,3 +1,9 @@
+
+> [!NOTE]  
+> To start the WebRTC signaling server, go to the `WebApp/src/` folder, and run `run_wsserver.sh`.
+>
+> The signaling server will listen on the 7070 port.
+
 # Unity Render Streaming
 
 <img src="https://img.shields.io/badge/unity-2020.3-green.svg?style=flat-square" alt="unity 2020.3">
